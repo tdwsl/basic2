@@ -1,0 +1,5 @@
+name "basic2"
+description "a simple basic interpreter"
+authors "tdwsl"
+copyright "Copyright © 2022, tdwsl"
+license "MIT"
