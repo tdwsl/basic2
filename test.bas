@@ -12,4 +12,17 @@ for i = 1 to 10
   print "For loop ";i
 next
 
+s$ = "Hello again, world!"
+gosub prints
+gosub prints
+
+n = 10 + (2-3) * 20 / -2
+print "";n
+
 print "Goodbye!"
+
+exit
+
+prints:
+print s$
+return

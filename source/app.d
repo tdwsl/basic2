@@ -11,6 +11,13 @@ void main(string[] args) {
 		return;
 	}
 
+	if(args[1] == "-d") {
+		string[] arr = splitLine("10 + (2-3) * 20 / -2", ['/','*','+','-','(',')']);
+		Expression e = Expression.from(arr, ["/", "*", "+", "-"]);
+		writeln(e.vals, e.ops);
+		return;
+	}
+
 	if(!exists(args[1])) {
 		writefln("failed to open %s", args[1]);
 		return;

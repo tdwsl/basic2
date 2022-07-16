@@ -99,7 +99,24 @@ string doOp(string v1, string v2, string op, long l) {
 	assert(0);
 }
 
-string evalExpr(Expression e, long l) {
+string evalExpr(string[] arr, string[] operators, long l) {
+	long depth = 0;
+	long start;
+	for(long i = 0; i < arr.length; i++) {
+		if(arr[i] == "(") {
+			if(depth++ == 0) start = i;
+		}
+		else if(arr[i] == ")") {
+			if(--depth == 0) {
+				string r = evalExpr(arr[start+1..i], operators, l);
+				arr = arr[0..start] ~ r ~ arr[i+1..arr.length];
+			}
+		}
+	}
+	sassert(depth == 0, l);
+
+	Expression e = Expression.from(arr, operators);
+
 	sassert(e.vals.length != 0, l);
 	sassert(e.ops.length == e.vals.length-1, l);
 
@@ -124,8 +141,18 @@ export void runString(string text) {
 	ubyte rsp = 0;
 	Tuple!(long, string, int)[64] fstack;
 	ubyte fsp = 0;
-
 	bool wasif=false, lastif;
+
+	for(long l = 0; l < lines.length; l++) {
+		string[] line = splitLine(lines[l], punctuation);
+		if(line.length < 2)
+			continue;
+		if(line[1] == ":") {
+			sassert(line.length == 2, l);
+			labels[line[0]] = l;
+		}
+	}
+
 	for(long l = 0; l < lines.length; l++) {
 		string[] line = splitLine(lines[l], punctuation);
 		long ol = line.length;
@@ -139,7 +166,7 @@ export void runString(string text) {
 			if(line[0] == "IF") {
 				long t = indexOf(line, "THEN");
 				sassert(t != -1, l);
-				string r = evalExpr(Expression.from(line[1..t], operators), l);
+				string r = evalExpr(line[1..t], operators, l);
 				bool tf;
 				if(isInt(r))
 					tf = to!int(r) != 0;
@@ -169,9 +196,12 @@ export void runString(string text) {
 				break;
 
 			if(line[0] == "PRINT") {
-				string s = evalExpr(Expression.from(line[1..line.length], operators), l);
+				string s = evalExpr(line[1..line.length], operators, l);
 				if(s[0] == '"') s = s[1..s.length];
 				writeln(s);
+			}
+			else if(line[0] == "EXIT") {
+				return;
 			}
 			else if(line[0] == "FOR") {
 				sassert(line.length == ol, l);
@@ -180,9 +210,9 @@ export void runString(string text) {
 				sassert(line[1][line[1].length-1] != '$', l);
 				long t = indexOf(line, "TO");
 				sassert(t != -1, l);
-				string v1 = evalExpr(Expression.from(line[3..t], operators), l);
+				string v1 = evalExpr(line[3..t], operators, l);
 				sassert(isInt(v1), l);
-				string v2 = evalExpr(Expression.from(line[t+1..line.length], operators), l);
+				string v2 = evalExpr(line[t+1..line.length], operators, l);
 				sassert(isInt(v2), l);
 				setVariable(line[1], v1, l);
 				fstack[fsp++] = tuple(l, line[1], to!int(v2));
@@ -228,17 +258,10 @@ export void runString(string text) {
 			}
 			else if(line[1] == "=") {
 				sassert(line.length >= 3, l);
-				setVariable(line[0], evalExpr(Expression.from(line[2..line.length], operators), l), l);
+				setVariable(line[0], evalExpr(line[2..line.length], operators, l), l);
 			}
 			else
 				sassert(0, l);
-
-			/*long c = indexOf(line, ":");
-			if(c != -1) {
-				line = line[c+1..line.length];
-				ol = line.length;
-				continue;
-			}*/
 
 			break;
 		}
