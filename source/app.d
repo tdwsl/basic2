@@ -1,24 +1,21 @@
-import std.stdio;
 import expression;
-import split;
-import vm;
+import util;
+import run;
+import std.stdio;
+import std.file;
 
-void main() {
-	string[] operators = ["/", "*", "+", "-"];
-	char[] punctuation = ['(', ')', '/', '*', '+', '-'];
-	string line = "10 + 5/2 - 3 + -4";
-	writeln(line);
-	Expression e = Expression.fromArr(splitLine(line, punctuation), operators);
-	writeln(e.vals, e.ops);
-	line = "if 1-1 then print 'no way'";
-	writeln(splitLine(line, punctuation));
+void main(string[] args) {
+	if(args.length != 2) {
+		writeln("basic2 - tdwsl 2022");
+		writefln("usage: %s <filename>", args[0]);
+		return;
+	}
 
-	VM vm = new VM();
-	vm.addRA(0, VM.LM, 0, 5);
-	vm.addRA(5, VM.LM, 1, 7);
-	vm.addRRR(10, VM.ADD, 0, 0, 1);
-	vm.addR(12, VM.INT, 0);
-	vm.print(0, 13);
-	vm.registers[15] = 0;
-	writeln(vm.run());
+	if(!exists(args[1])) {
+		writefln("failed to open %s", args[1]);
+		return;
+	}
+
+	string text = cast(string)(read(args[1]));
+	runString(text);
 }
