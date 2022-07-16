@@ -18,6 +18,9 @@ void sassert(bool cond, long l) {
 }
 
 void setVariable(string name, string v, long l) {
+	sassert(name[0] != '"', l);
+	sassert(!isInt(name), l);
+
 	if(name[name.length-1] == '$')
 		sassert(v[0] == '"', l);
 	else
@@ -119,10 +122,13 @@ export void runString(string text) {
 	long[string] labels;
 	Tuple!(long, bool, bool)[256] rstack;
 	ubyte rsp = 0;
+	Tuple!(long, string, int)[64] fstack;
+	ubyte fsp = 0;
 
 	bool wasif=false, lastif;
 	for(long l = 0; l < lines.length; l++) {
 		string[] line = splitLine(lines[l], punctuation);
+		long ol = line.length;
 		for(;;) {
 			if(line.length == 0)
 				break;
@@ -167,6 +173,35 @@ export void runString(string text) {
 				if(s[0] == '"') s = s[1..s.length];
 				writeln(s);
 			}
+			else if(line[0] == "FOR") {
+				sassert(line.length == ol, l);
+				sassert(line.length >= 6, l);
+				sassert(line[2] == "=", l);
+				sassert(line[1][line[1].length-1] != '$', l);
+				long t = indexOf(line, "TO");
+				sassert(t != -1, l);
+				string v1 = evalExpr(Expression.from(line[3..t], operators), l);
+				sassert(isInt(v1), l);
+				string v2 = evalExpr(Expression.from(line[t+1..line.length], operators), l);
+				sassert(isInt(v2), l);
+				setVariable(line[1], v1, l);
+				fstack[fsp++] = tuple(l, line[1], to!int(v2));
+			}
+			else if(line[0] == "NEXT") {
+				sassert(line.length == ol, l);
+				sassert(line.length == 1, l);
+				int i = to!int(getVariable(fstack[fsp-1][1]));
+				if(i < fstack[fsp-1][2])
+					i++;
+				else if(i > fstack[fsp-1][2])
+					i--;
+				else {
+					fsp--;
+					break;
+				}
+				setVariable(fstack[fsp-1][1], to!string(i), l);
+				l = fstack[fsp-1][0];
+			}
 			else if(line[0] == "GOTO") {
 				sassert(line.length == 2, l);
 				sassert((line[1] in labels) != null, l);
@@ -189,15 +224,21 @@ export void runString(string text) {
 			else if(line[1] == ":") {
 				sassert(line.length == 2, l);
 				labels[line[0]] = l;
+				break;
 			}
 			else if(line[1] == "=") {
 				sassert(line.length >= 3, l);
-				sassert(line[0][0] != '"', l);
-				sassert(!isInt(line[0]), l);
 				setVariable(line[0], evalExpr(Expression.from(line[2..line.length], operators), l), l);
 			}
 			else
 				sassert(0, l);
+
+			/*long c = indexOf(line, ":");
+			if(c != -1) {
+				line = line[c+1..line.length];
+				ol = line.length;
+				continue;
+			}*/
 
 			break;
 		}
